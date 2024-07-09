@@ -298,6 +298,7 @@ func (st *StateTransition) buyGas() (*big.Int, error) {
 	if st.evm.Context.L1CostFunc != nil && st.msg.RunMode != EthcallMode {
 		l1Cost = st.evm.Context.L1CostFunc(st.evm.Context.BlockNumber.Uint64(), st.evm.Context.Time, st.msg.RollupDataGas, st.msg.IsDepositTx, st.msg.To)
 	}
+	fmt.Println("gaslimit, gasprice, evmcost, l1cost:", st.msg.GasLimit, st.msg.GasPrice, mgval, l1Cost)
 	if l1Cost != nil && (st.msg.RunMode == GasEstimationMode || st.msg.RunMode == GasEstimationWithSkipCheckBalanceMode) {
 		mgval = mgval.Add(mgval, l1Cost)
 	}
@@ -504,6 +505,7 @@ func (st *StateTransition) innerTransitionDb() (*ExecutionResult, error) {
 	if err != nil {
 		return nil, err
 	}
+	// fmt.Println("l1Cost:", l1Cost)
 
 	if st.evm.Config.Debug {
 		st.evm.Config.Tracer.CaptureTxStart(st.initialGas)
@@ -651,6 +653,7 @@ func (st *StateTransition) refundGas(refundQuotient, tokenRatio uint64) {
 	refund := st.gasUsed() / refundQuotient
 	if refund > st.state.GetRefund() {
 		refund = st.state.GetRefund()
+		// fmt.Println("refund:", refund)
 	}
 	st.gasRemaining += refund
 

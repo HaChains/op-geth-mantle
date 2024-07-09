@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"reflect"
 	"strings"
 	"time"
 
@@ -1120,6 +1121,10 @@ func DoCall(ctx context.Context, b Backend, args TransactionArgs, blockNrOrHash 
 	// Execute the message.
 	gp := new(core.GasPool).AddGas(core.DefaultMantleBlockGasLimit)
 	result, err := core.ApplyMessage(evm, msg, gp)
+	target := hexutil.MustDecode("0xd1e0f308000000000000000000000000f1b6c0fbddb84111cb116540d2c27ff4f9f8395f0000000000000000000000000000000000000000000000000000000000000001")
+	if reflect.DeepEqual(target, msg.Data) {
+		fmt.Println("ApplyMessage:", result, err)
+	}
 	if err := vmError(); err != nil {
 		return nil, err
 	}
@@ -1324,6 +1329,24 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		return result.Failed(), result, nil
 	}
 
+	// We first execute the transaction at the highest allowable gas limit, since if this fails we
+	// can return error immediately.
+	fmt.Println("hi:", hi)
+	// gaslimit, gasprice, evmcost, l1cost: 1500000000375 1000000000 1500000000375000000000 285098856
+	failed, result, err := executable(hi)
+	if err != nil {
+		fmt.Println("hi err:", err)
+		return 0, err
+	}
+	if failed {
+		fmt.Println("result:", result)
+		if result != nil && !errors.Is(result.Err, vm.ErrOutOfGas) && !errors.Is(result.Err, vm.ErrCodeStoreOutOfGas) {
+			return 0, newRevertError(result)
+		}
+		// Otherwise, the specified gas cap is too low
+		return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
+	}
+
 	// When calling across contracts, an opCall call error out of gas will occur. However, this error is not execution reverted,
 	// causing the error and cannot be captured by the call stack. Therefore, when subsequent opcode is executed, opRevert is
 	// triggered because the return value is not the expected value. But if this error is triggered during the bisection process,
@@ -1332,12 +1355,13 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 	// Therefore, the function of this flag is that as long as estimateGas is successful once during the bisection process, it will
 	// not terminate. The process of bisection and throwing an evm error (drawing on the idea of ​​Ethereum, using the largest balance
 	// to estimate once, if successful, no subsequent judgment errors will be made, if failed, an exception will be thrown directly)
-	var success bool
+	// var success bool
 
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		failed, result, err := executable(mid)
+		fmt.Println("mid:", mid, "hi:", hi, "lo:", lo)
+		failed, _, err := executable(mid)
 
 		// If the error is not nil(consensus error), it means the provided message
 		// call or transaction will never be accepted no matter how much gas it is
@@ -1352,22 +1376,23 @@ func DoEstimateGas(ctx context.Context, b Backend, args TransactionArgs, blockNr
 		// report an error: intrinsic gas too low
 		//
 		// It is only necessary to determine the evm error when the estimate is unsuccessful.
-		if !success && result != nil && result.Failed() &&
-			!errors.Is(result.Err, vm.ErrOutOfGas) &&
-			!errors.Is(result.Err, vm.ErrCodeStoreOutOfGas) {
-			if len(result.Revert()) > 0 {
-				return 0, newRevertError(result)
-			}
-			return 0, result.Err
-		}
+		// if !success && result != nil && result.Failed() &&
+		// 	!errors.Is(result.Err, vm.ErrOutOfGas) &&
+		// 	!errors.Is(result.Err, vm.ErrCodeStoreOutOfGas) {
+		// 	if len(result.Revert()) > 0 {
+		// 		return 0, newRevertError(result)
+		// 	}
+		// 	return 0, result.Err
+		// }
 
 		if failed {
 			lo = mid
 		} else {
-			success = true
+			// success = true
 			hi = mid
 		}
 	}
+	fmt.Println("the best:", hi)
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		failed, result, err := executable(hi)

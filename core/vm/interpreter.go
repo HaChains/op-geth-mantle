@@ -17,7 +17,11 @@
 package vm
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -165,6 +169,11 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			}
 		}()
 	}
+	target := hexutil.MustDecode("0xd1e0f308000000000000000000000000f1b6c0fbddb84111cb116540d2c27ff4f9f8395f0000000000000000000000000000000000000000000000000000000000000001")
+	print := reflect.DeepEqual(target, input)
+	if print {
+		fmt.Println("c.Code:", contract.Code)
+	}
 	// The Interpreter main run loop (contextual). This loop runs until either an
 	// explicit STOP, RETURN or SELFDESTRUCT is executed, an error occurred during
 	// the execution of one of the operations or until the done flag is set by the
@@ -177,6 +186,9 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 		// Get the operation from the jump table and validate the stack to ensure there are
 		// enough stack items available to perform the operation.
 		op = contract.GetOp(pc)
+		// if print {
+		// 	fmt.Println("pc:", pc, "op:", op.String())
+		// }
 		operation := in.table[op]
 		cost = operation.constantGas // For tracing
 		// Validate stack
@@ -212,6 +224,7 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			dynamicCost, err = operation.dynamicGas(in.evm, contract, stack, mem, memorySize)
 			cost += dynamicCost // for tracing
 			if err != nil || !contract.UseGas(dynamicCost) {
+				fmt.Println("ErrOutOfGas:", ErrOutOfGas)
 				return nil, ErrOutOfGas
 			}
 			// Do tracing before memory expansion
@@ -227,11 +240,20 @@ func (in *EVMInterpreter) Run(contract *Contract, input []byte, readOnly bool) (
 			logged = true
 		}
 		// execute the operation
+		if print {
+			fmt.Println("pc-execute:", pc)
+		}
 		res, err = operation.execute(&pc, in, callContext)
+		if print {
+			fmt.Println("pc:", pc, "op:", op.String(), "err:", err)
+		}
 		if err != nil {
 			break
 		}
 		pc++
+		if print {
+			fmt.Println("pc:", pc)
+		}
 	}
 
 	if err == errStopToken {
