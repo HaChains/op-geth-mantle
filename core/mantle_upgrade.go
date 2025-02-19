@@ -34,6 +34,15 @@ var (
 		ProxyOwnerUpgradeTime: nil,
 		MantleEverestTime:     u64Ptr(1_735_023_600),
 	}
+	MantleHoleskyQA2UpgradeConfig = MantleUpgradeChainConfig{
+		ChainID:               params.MantleHoleskyQA2ChainId,
+		BaseFeeTime:           u64Ptr(0),
+		BVMETHMintUpgradeTime: u64Ptr(0),
+		MetaTxV2UpgradeTime:   u64Ptr(0),
+		MetaTxV3UpgradeTime:   u64Ptr(1_740_013_200),
+		ProxyOwnerUpgradeTime: u64Ptr(1_740_013_200),
+		MantleEverestTime:     u64Ptr(1_740_013_200),
+	}
 	MantleLocalUpgradeConfig = MantleUpgradeChainConfig{
 		ChainID:               params.MantleLocalChainId,
 		BaseFeeTime:           u64Ptr(0),
