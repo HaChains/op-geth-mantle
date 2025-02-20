@@ -39,9 +39,9 @@ var (
 		BaseFeeTime:           u64Ptr(0),
 		BVMETHMintUpgradeTime: u64Ptr(0),
 		MetaTxV2UpgradeTime:   u64Ptr(0),
-		MetaTxV3UpgradeTime:   u64Ptr(1_740_013_200),
-		ProxyOwnerUpgradeTime: u64Ptr(1_740_013_200),
-		MantleEverestTime:     u64Ptr(1_740_013_200),
+		MetaTxV3UpgradeTime:   u64Ptr(1_740_033_000),
+		ProxyOwnerUpgradeTime: u64Ptr(1_740_033_000),
+		MantleEverestTime:     u64Ptr(1_740_033_000),
 	}
 	MantleLocalUpgradeConfig = MantleUpgradeChainConfig{
 		ChainID:               params.MantleLocalChainId,
